@@ -1,0 +1,650 @@
+{
+  "format": "readfirst/map@1",
+  "groups": [
+    {
+      "id": "changeset",
+      "title": "Changesets that version and release the SDKs, extension and protocol",
+      "files": [
+        ".changeset/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm exec tsx scripts/release/check-changesets.ts",
+          "why": "changeset files are valid for the packages they name"
+        }
+      ],
+      "risks": [
+        {
+          "text": "An extension-only fix needs a changeset for the extension plus each SDK that should ship it, because the extension is embedded in each SDK and only an SDK release delivers it; a protocol bump is not needed for it."
+        }
+      ]
+    },
+    {
+      "id": "cubic",
+      "title": "Config for the cubic code-review bot",
+      "files": [
+        ".cubic/**"
+      ],
+      "checks": [],
+      "risks": []
+    },
+    {
+      "id": "github",
+      "title": "CI and release workflows (CI, npm and PyPI publish, external contributor PR handling)",
+      "files": [
+        ".github/**"
+      ],
+      "checks": [],
+      "risks": [
+        {
+          "text": "Merging a normal PR publishes nothing; merging the Changesets release PR publishes the TypeScript SDK to npm and the Python SDK to PyPI, so edits to release.yml or publish-python.yml change what ships.",
+          "files": [
+            ".github/workflows/release.yml",
+            ".github/workflows/publish-python.yml"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "media",
+      "title": "Images and videos used by READMEs and docs (binary, not read); loaded only through README.md and docs links",
+      "files": [
+        "media/**"
+      ],
+      "checks": [],
+      "risks": []
+    },
+    {
+      "id": "packages-cli",
+      "title": "browse: Unified Browserbase CLI for browser automation, cloud APIs and the local Functions dev server",
+      "files": [
+        "packages/cli/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter browse test",
+          "why": "functions dev server, CLI commands and driver discovery"
+        },
+        {
+          "run": "pnpm --filter browse run lint",
+          "why": "CLI lint rules incl. config rules"
+        }
+      ],
+      "risks": [
+        {
+          "text": "`browse functions dev` puts a random 32-byte token into the runtime API path and 404s runtime poll/response/error requests without it; changing the route or the worker URL without the token lets any local caller on the port read invocations or post results.",
+          "files": [
+            "packages/cli/src/lib/functions/dev.ts"
+          ]
+        },
+        {
+          "text": "bin/run.js loads .env from the cwd with dotenv, which never overrides variables already set in the shell, so a stale shell export silently beats the .env value; BROWSE_LOAD_DOTENV=0 turns loading off and the default is slated to flip.",
+          "files": [
+            "packages/cli/bin/run.js"
+          ]
+        },
+        {
+          "text": "The Node version gate in bin/run.js reads engines.node from package.json (>=22.18.0, same as the SDK); change the engines range and the runtime check and error message follow it, so keep it aligned with the SDK and CONTRIBUTING.",
+          "files": [
+            "packages/cli/bin/run.js",
+            "packages/cli/package.json"
+          ]
+        },
+        {
+          "text": "Local Chrome discovery trusts a DevToolsActivePort file only after the port's live /json/version reports the same websocket path, because another process often rebinds 9222; skipping that probe attaches to the wrong browser.",
+          "files": [
+            "packages/cli/src/lib/driver/local-cdp-discovery.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-docs",
+      "title": "Documentation site for Stagehand (run with `pnpm run docs`)",
+      "files": [
+        "packages/docs/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-docs run typecheck",
+          "why": "docs site code compiles"
+        }
+      ],
+      "risks": []
+    },
+    {
+      "id": "packages-evals",
+      "title": "Evaluation harness and TUI for Stagehand tasks, models and Braintrust reporting",
+      "files": [
+        "packages/evals/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-evals test",
+          "why": "eval TUI, env loading and framework adapters"
+        },
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-evals run typecheck",
+          "why": "eval task and runner types"
+        }
+      ],
+      "risks": [
+        {
+          "text": "The evals CLI loads .env only through evalsEnv.ts (cwd/.env first, then packages/evals/.env) and never overrides an existing process.env value, so a shell or CI secret beats the file and the doctor reports which source won.",
+          "files": [
+            "packages/evals/evalsEnv.ts",
+            "packages/evals/tui/welcomeStatus.ts"
+          ]
+        },
+        {
+          "text": "Every bench task and eval run makes paid model calls (and Browserbase sessions); running the whole suite or looping over models multiplies cost and time.",
+          "files": [
+            "packages/evals/tasks/**"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-examples",
+      "title": "Examples, showcases and cookbooks that run Stagehand end to end (TypeScript and Python)",
+      "files": [
+        "packages/examples/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-examples run typecheck",
+          "why": "examples compile against the SDK"
+        }
+      ],
+      "risks": [
+        {
+          "text": "Showcase scripts and cookbooks call dotenv's config(), which does not override variables already exported in the shell, so a key in .env is ignored when the shell already has one.",
+          "files": [
+            "packages/examples/showcase/_harness/run.ts"
+          ]
+        },
+        {
+          "text": "Examples need a built extension and SDK first (just example, just showcase, just cookbook build them); running a script with tsx alone uses stale bundles.",
+          "files": [
+            "packages/examples/**"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-extension",
+      "title": "The in-browser Stagehand runtime (Chrome extension) serving act/extract/observe over CDP JSON-RPC, with the understudy page/frame/context layer",
+      "files": [
+        "packages/extension/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-extension test",
+          "why": "extension runtime through a fresh build"
+        },
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-extension run typecheck",
+          "why": "extension types"
+        }
+      ],
+      "risks": [
+        {
+          "text": "Domain policy changes are serialized on context.domainPolicyTail and the new policy is published only after Chrome's DNR rules were installed; the runtime also resets the policy to null when the Stagehand instance is disposed, so skipping the queue or the reset leaks a policy into the next session.",
+          "files": [
+            "packages/extension/understudy/context.ts",
+            "packages/extension/runtime.ts"
+          ]
+        },
+        {
+          "text": "ensureBrowserConnection rebuilds the browser session whenever the CDP URL differs from the stored one; keep browserSessionCdpUrl set and cleared with the session, or re-initialization keeps talking to the old browser.",
+          "files": [
+            "packages/extension/runtime.ts"
+          ]
+        },
+        {
+          "text": "Cross-origin iframes (OOPIFs) are adopted as child CDP sessions with ownership seeded for their subtree, including ones that existed before attach and nested ones; changes to page.ts or frame.ts that skip adoption or pass no progress tracker break act/locators inside iframes and ignore screenshot/pdf/waitForSelector deadlines.",
+          "files": [
+            "packages/extension/understudy/page.ts",
+            "packages/extension/understudy/frame.ts"
+          ]
+        },
+        {
+          "text": "act() substitutes %name% variables into action arguments, but not into drag-and-drop arguments, which are selectors that page-controlled names must not rewrite; cached-action replay substitutes again.",
+          "files": [
+            "packages/extension/services/actService.ts"
+          ]
+        },
+        {
+          "text": "The extension bundle is generated by vite build and embedded in each SDK; its tests run `pnpm run build` first, so edit sources and rebuild instead of patching bundles.",
+          "files": [
+            "packages/extension/package.json"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-integrations",
+      "title": "Adapters that expose Stagehand to agent hosts (Cursor, fx, Codex, Claude, Mastra, Vercel AI, Deepagents, Eve, pi) and their SDK session wrappers",
+      "files": [
+        "packages/integrations/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter ./packages/integrations/fx-sdk run test:unit",
+          "why": "fx session environment and layout"
+        },
+        {
+          "run": "just test-deepagents",
+          "why": "Deepagents adapter and eval runner"
+        }
+      ],
+      "risks": [
+        {
+          "text": "Agent hosts see exactly three Stagehand tools (run, snapshot, screenshot); there is no navigate or start tool, so docs and prompts must open URLs with `run` and page.goto, and for fx must use the exact mcp_stagehand_* names, never invented ones.",
+          "files": [
+            "packages/integrations/cursor/AGENTS.md",
+            "packages/integrations/fx/AGENTS.md"
+          ]
+        },
+        {
+          "text": "fx harness sessions must set FX_SOUND=off (with FX_SKIP_ONBOARDING, FX_AUTO_UPGRADE=0, FX_NO_OPEN_BROWSER) so a non-interactive run does not play sounds or prompt.",
+          "files": [
+            "packages/integrations/fx-sdk/src/session.ts"
+          ]
+        },
+        {
+          "text": "claude-cua-sdk makes one paid Anthropic messages.create call per turn in a loop bounded only by input.maxTurns; keep that limit set.",
+          "files": [
+            "packages/integrations/claude-cua-sdk/src/session.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-protocol",
+      "title": "The JSON-RPC protocol: Zod schemas, generated stagehand.v4.json and versioning; the contract for the extension and every SDK",
+      "files": [
+        "packages/protocol/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter ./packages/protocol build",
+          "why": "regenerates stagehand.v4.json from schemas.ts"
+        }
+      ],
+      "risks": [
+        {
+          "text": "stagehand.v4.json is generated from schemas.ts by `pnpm --filter ./packages/protocol build` and the Python and Go models are generated from it; edit the schema, then run `just generate` and commit the regenerated files or `just check` fails on drift.",
+          "files": [
+            "packages/protocol/stagehand.v4.json",
+            "packages/protocol/schemas.ts"
+          ]
+        },
+        {
+          "text": "Model IDs are validated only as non-empty strings without whitespace so new provider models work without a release; do not turn them back into closed enums.",
+          "files": [
+            "packages/protocol/schemas.ts"
+          ]
+        },
+        {
+          "text": "Telemetry export is opt-in: the telemetry config needs an explicit traces endpoint ending in /v1/traces and nothing is sent by default; do not add a default endpoint.",
+          "files": [
+            "packages/protocol/schemas.ts"
+          ]
+        },
+        {
+          "text": "The protocol version drives compatibility: a new capability a client may require is a minor, a breaking wire change is a major; the changeset type must match.",
+          "files": [
+            "packages/protocol/protocol-version.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-sdk-python",
+      "title": "Python SDK (`stagehand` on PyPI): launches Chrome with the extension and drives the runtime; models generated from the protocol",
+      "files": [
+        "packages/sdk-python/**"
+      ],
+      "checks": [
+        {
+          "run": "uv --directory packages/sdk-python run --locked pytest",
+          "why": "the Python SDK tests"
+        },
+        {
+          "run": "uv --directory packages/sdk-python run --locked python scripts/generate.py --check",
+          "why": "generated models match the protocol schema"
+        }
+      ],
+      "risks": [
+        {
+          "text": "Everything under src/stagehand/_generated/ is output of scripts/generate.py from stagehand.v4.json; hand edits are overwritten and fail the --check drift test.",
+          "files": [
+            "packages/sdk-python/src/stagehand/_generated/**"
+          ]
+        },
+        {
+          "text": "browser.py launches Chrome with a fixed flag list including WebMCP features and --remote-allow-origins=*; a missing or renamed flag silently disables WebMCP or blocks the extension's CDP connection.",
+          "files": [
+            "packages/sdk-python/src/stagehand/browser.py"
+          ]
+        },
+        {
+          "text": "The extension is discovered automatically; the extension_id parameter is deprecated and ignored, and extension_cdp_url must be the browser-level websocket the extension dials from inside the browser, not necessarily the client's own.",
+          "files": [
+            "packages/sdk-python/src/stagehand/browser.py"
+          ]
+        },
+        {
+          "text": "The SDK targets Pydantic v2 (pydantic>=2.12,<3) and builds requests with model_validate; v1 calls such as .dict() or parse_obj will not work.",
+          "files": [
+            "packages/sdk-python/pyproject.toml",
+            "packages/sdk-python/src/stagehand/page.py"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-sdk-ts",
+      "title": "TypeScript SDK (`@browserbasehq/stagehand`) that consumes the protocol schemas directly and ships the extension; integration tests live here",
+      "files": [
+        "packages/sdk-ts/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand test",
+          "why": "SDK unit and browser-runtime tests"
+        },
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand run typecheck",
+          "why": "SDK types"
+        }
+      ],
+      "risks": [
+        {
+          "text": "Integration tests under tests/integration must each be listed in exactly one group in scripts/test-integration.ts, or discovery throws.",
+          "files": [
+            "packages/sdk-ts/tests/integration/**"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "root",
+      "title": "Root config, docs and build tooling for the pnpm and uv workspaces",
+      "files": [
+        ".env.example",
+        ".gitignore",
+        ".oxfmtrc.json",
+        "AGENTS.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "LICENSE",
+        "README.md",
+        "SECURITY.md",
+        "cubic.yaml",
+        "justfile",
+        "oxlint.config.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "pyproject.toml",
+        "tsconfig.json",
+        "tsconfig.tooling.json",
+        "turbo.json",
+        "uv.lock",
+        "vitest.config.ts",
+        "vitest.integration.config.ts"
+      ],
+      "checks": [
+        {
+          "run": "just check",
+          "why": "formatting, lint, types, release metadata and Python generated-code drift"
+        },
+        {
+          "run": "just test",
+          "why": "vitest, pytest and Python cookbook checkpoint tests"
+        }
+      ],
+      "risks": [
+        {
+          "text": "`pnpm install` covers only the TypeScript workspace; the Python projects share the root uv.lock and .venv and need `just install` (uv sync --locked); after a dependency change run `uv lock` from the root and commit it with the member pyproject.toml.",
+          "files": [
+            "justfile",
+            "pyproject.toml",
+            "uv.lock"
+          ]
+        },
+        {
+          "text": "`just` recipes prefixed with _ are internal release commands (_version, _publish-*); running them directly versions or publishes packages.",
+          "files": [
+            "justfile"
+          ]
+        },
+        {
+          "text": "`just generate` rebuilds the protocol, Python models and extension bundle; run it after touching packages/protocol and commit the output.",
+          "files": [
+            "justfile"
+          ]
+        },
+        {
+          "text": "The nested Deepagents runner and examples must be run with `--project` (repo root) and `--package`, because their intermediate pyproject.toml stops uv's workspace discovery; use the just recipes (check-deepagents, test-deepagents) instead of bare uv commands.",
+          "files": [
+            "justfile"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rules",
+      "title": "Repository lint and ast-grep rules enforcing parity between protocol, extension and SDKs",
+      "files": [
+        "rules/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm run test:unit",
+          "why": "the rule tests (vitest run rules scripts)"
+        }
+      ],
+      "risks": [
+        {
+          "text": "The ast-grep parity tests compare protocol, extension and SDK sources; adding an RPC method or schema field in one place fails them until the others match, which is intended.",
+          "files": [
+            "rules/ast-grep/**"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scripts",
+      "title": "Release tooling and the integration test discovery/runner",
+      "files": [
+        "scripts/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm run test:unit",
+          "why": "release and integration-discovery scripts"
+        }
+      ],
+      "risks": [
+        {
+          "text": "test-integration.ts keeps a hand-written map of integration tests to groups; discovery throws when a test file is missing, listed twice or unknown, and the groups cover iframe cases (actIframeAttachment, iframeLocatorReadiness, webmcpIframes) fixed in several past commits.",
+          "files": [
+            "scripts/test-integration.ts"
+          ]
+        },
+        {
+          "text": "scripts/release/* version, consolidate changelogs and sync the Python version from package metadata; `just check` runs them with --check, so run them through just rather than by hand.",
+          "files": [
+            "scripts/release/**"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tests",
+      "title": "Shared test fixtures",
+      "files": [
+        "tests/**"
+      ],
+      "checks": [],
+      "risks": []
+    }
+  ],
+  "rules": [
+    {
+      "id": "protocol-is-contract",
+      "rule": "Change protocol schemas first, then the extension and every client; regenerate with `just generate` and commit the generated files.",
+      "why": "The Python and Go models and stagehand.v4.json derive from the protocol; stale output fails `just check` and breaks clients at runtime.",
+      "files": [
+        "packages/protocol/**",
+        "packages/sdk-python/src/stagehand/_generated/**"
+      ],
+      "checks": [
+        {
+          "run": "just check",
+          "why": "formatting, lint, types, release metadata and generated-model drift"
+        }
+      ]
+    },
+    {
+      "id": "no-hand-edit-generated",
+      "rule": "Never hand-edit packages/sdk-python/src/stagehand/_generated/.",
+      "why": "The next generate run overwrites it and the drift check fails.",
+      "files": [
+        "packages/sdk-python/src/stagehand/_generated/**"
+      ]
+    },
+    {
+      "id": "changeset-for-public-change",
+      "rule": "Run `just changeset` for changes to a public SDK, the extension or the protocol contract, selecting only the packages to release.",
+      "why": "Without it nothing ships, since releases are driven by the Changesets release PR.",
+      "files": [
+        ".changeset/**",
+        "packages/sdk-ts/**",
+        "packages/extension/**",
+        "packages/protocol/**",
+        "packages/sdk-python/**"
+      ]
+    },
+    {
+      "id": "extension-ships-in-sdk",
+      "rule": "An extension fix is released by also selecting each SDK that should ship it.",
+      "why": "The extension is embedded in each SDK and not published separately, so users never get the fix otherwise.",
+      "files": [
+        "packages/extension/**"
+      ]
+    },
+    {
+      "id": "protocol-semver",
+      "rule": "Compatible correction is a protocol patch, a capability new clients may require is minor, a breaking wire change is major with a coordinated release.",
+      "why": "The runtime protocol version is the compatibility check between SDK and extension.",
+      "files": [
+        "packages/protocol/**"
+      ]
+    },
+    {
+      "id": "stacked-pr-merge",
+      "rule": "Target each stacked PR at its immediate predecessor; after a squash merge S, merge S^ and then `-s ours` S into the child and confirm the child's files are unchanged with git diff.",
+      "why": "Otherwise the child PR diff shows or reverts the parent's changes.",
+      "files": [
+        "AGENTS.md",
+        "CONTRIBUTING.md"
+      ]
+    },
+    {
+      "id": "agent-host-tool-names",
+      "rule": "Cursor and fx integrations expose only the run, snapshot and screenshot tools; use exact names (mcp_stagehand_*) in fx and never invent navigate/start tools or launch a separate browser.",
+      "why": "Invented tool names fail in the host and a second browser bypasses the persistent Stagehand session.",
+      "files": [
+        "packages/integrations/cursor/**",
+        "packages/integrations/fx/**"
+      ]
+    },
+    {
+      "id": "functions-dev-token",
+      "rule": "browse functions dev runtime endpoints must require the per-run random token.",
+      "why": "Otherwise any local process on the port can poll invocations or post results.",
+      "files": [
+        "packages/cli/src/lib/functions/dev.ts"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter browse test",
+          "why": "the dev server token checks and CLI behaviour"
+        }
+      ]
+    },
+    {
+      "id": "domain-policy-reset",
+      "rule": "Domain policy is applied through the serialized queue and cleared when the Stagehand instance is disposed.",
+      "why": "A leaked or racing policy blocks navigation in the next session.",
+      "files": [
+        "packages/extension/runtime.ts",
+        "packages/extension/understudy/context.ts"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-extension test",
+          "why": "domain policy and session lifecycle through a fresh extension build"
+        }
+      ]
+    },
+    {
+      "id": "telemetry-opt-in",
+      "rule": "Telemetry export must stay opt-in with no default endpoint.",
+      "why": "Users' traces would otherwise be sent off-machine without consent.",
+      "files": [
+        "packages/protocol/schemas.ts"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-protocol test",
+          "why": "protocol schema tests including telemetry config"
+        }
+      ]
+    }
+  ],
+  "ignore": [],
+  "hotspots": [
+    {
+      "file": "packages/cli/src/lib/functions/dev.ts",
+      "symbol": "start",
+      "line": 248,
+      "labels": [
+        "secrets"
+      ],
+      "rules": [
+        "functions-dev-token"
+      ],
+      "note": "Reads secrets or the environment"
+    },
+    {
+      "file": "packages/cli/src/lib/functions/dev.ts",
+      "symbol": "getRuntimeStartupTimeoutMs",
+      "line": 456,
+      "labels": [
+        "secrets"
+      ],
+      "rules": [
+        "functions-dev-token"
+      ],
+      "note": "Reads secrets or the environment"
+    },
+    {
+      "file": "packages/extension/prompt.ts",
+      "symbol": "buildActPrompt",
+      "line": 229,
+      "labels": [
+        "db-read"
+      ],
+      "rules": [
+        "extension-ships-in-sdk",
+        "changeset-for-public-change"
+      ],
+      "note": "Queries the database; called from 1 other file read"
+    }
+  ]
+}
