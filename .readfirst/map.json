@@ -1,0 +1,643 @@
+{
+  "format": "readfirst/map@1",
+  "groups": [
+    {
+      "id": "changeset",
+      "title": "Changesets release notes: one .md per pull request that changes a public SDK, the extension or the protocol",
+      "files": [
+        ".changeset/**"
+      ],
+      "checks": [
+        {
+          "run": "just check",
+          "why": "release metadata check"
+        }
+      ],
+      "risks": []
+    },
+    {
+      "id": "cubic",
+      "title": "Cubic code-review bot configuration",
+      "files": [
+        ".cubic/**"
+      ],
+      "checks": [],
+      "risks": []
+    },
+    {
+      "id": "github",
+      "title": "GitHub workflows and templates (CI, release)",
+      "files": [
+        ".github/**"
+      ],
+      "checks": [
+        {
+          "run": "just check",
+          "why": "the formatting, lint, types and generated-code checks CI runs"
+        }
+      ],
+      "risks": []
+    },
+    {
+      "id": "media",
+      "title": "Images and logos used by READMEs and docs (binary, not read)",
+      "files": [
+        "media/**"
+      ],
+      "checks": [],
+      "risks": []
+    },
+    {
+      "id": "packages-cli",
+      "title": "browse: oclif CLI for browser control, cloud API, functions dev/publish and secrets",
+      "files": [
+        "packages/cli/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter browse test",
+          "why": "the test suite of browse"
+        },
+        {
+          "run": "pnpm --filter browse run lint",
+          "why": "lint rules of browse"
+        }
+      ],
+      "risks": [
+        {
+          "text": "bin/run.js imports dotenv and semver at the top, before the Node version check, and runs from dist (enableAutoTranspile false), so a src edit needs a rebuild and old Node can fail before the friendly message - packages/cli/bin/run.js:1-14,38 (history 10e0bd8)",
+          "files": [
+            "packages/cli/bin/run.js"
+          ]
+        },
+        {
+          "text": "loadDotenvConfig reads .env from the current directory and never overrides variables already set; a stale .env in an unrelated cwd silently supplies an API key and a shadowed key is not warned about - packages/cli/bin/run.js:26-36",
+          "files": [
+            "packages/cli/bin/run.js"
+          ]
+        },
+        {
+          "text": "`functions dev` secures the runtime routes with a per-run random token in the path prefix, checked by plain startsWith; every new route must sit behind that prefix check, and readJsonBody has no size limit - packages/cli/src/lib/functions/dev.ts:336,482,677 (history ce298c6)",
+          "files": [
+            "packages/cli/src/lib/functions/dev.ts"
+          ]
+        },
+        {
+          "text": "Secret values piped with --stdin keep the trailing newline (`echo foo |` stores \"foo\\n\") and empty stdin gives an empty secret with no refusal, while readStdin for JSON bodies trims - packages/cli/src/lib/secrets/input.ts:17-23 and packages/cli/src/lib/cloud/api.ts:239-250",
+          "files": [
+            "packages/cli/src/lib/secrets/input.ts",
+            "packages/cli/src/lib/cloud/api.ts"
+          ]
+        },
+        {
+          "text": "Local Chrome discovery trusts DevToolsActivePort only after probing /json/version on 127.0.0.1; remote or WSL setups are not found, and removing the probe reconnects to whichever browser owns port 9222 - packages/cli/src/lib/driver/local-cdp-discovery.ts:74,145 (history 514970e)",
+          "files": [
+            "packages/cli/src/lib/driver/local-cdp-discovery.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-docs",
+      "title": "Documentation site",
+      "files": [
+        "packages/docs/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-docs run typecheck",
+          "why": "types of @browserbasehq/stagehand-docs"
+        }
+      ],
+      "risks": []
+    },
+    {
+      "id": "packages-evals",
+      "title": "Evaluation harness (CLI, runner, TUI) that calls paid models",
+      "files": [
+        "packages/evals/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-evals test",
+          "why": "the test suite of @browserbasehq/stagehand-evals"
+        },
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-evals run typecheck",
+          "why": "types of @browserbasehq/stagehand-evals"
+        }
+      ],
+      "risks": [
+        {
+          "text": "evalsEnv.ts loads <cwd>/.env then packages/evals/.env and never overrides variables already in process.env, so the shell or CI wins over a .env value - packages/evals/evalsEnv.ts:8-14",
+          "files": [
+            "packages/evals/evalsEnv.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-examples",
+      "title": "Cookbooks and showcase examples that run against a real model and browser",
+      "files": [
+        "packages/examples/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-examples run typecheck",
+          "why": "types of @browserbasehq/stagehand-examples"
+        }
+      ],
+      "risks": [
+        {
+          "text": "The cookbooks load .env with a bare `import \"dotenv/config\"`, which never overrides variables already exported in the shell, so a stale shell key beats the .env key - packages/examples/cookbooks/persisted-login/typescript/src/index.ts:1",
+          "files": [
+            "packages/examples/cookbooks/persisted-login/typescript/src/index.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-extension",
+      "title": "Chrome MV3 extension runtime: JSON-RPC router, CDP page/frame/context layer, act/extract/observe services, domain policy",
+      "files": [
+        "packages/extension/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-extension test",
+          "why": "the test suite of @browserbasehq/stagehand-extension"
+        },
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-extension run typecheck",
+          "why": "types of @browserbasehq/stagehand-extension"
+        }
+      ],
+      "risks": [
+        {
+          "text": "Variable substitution in act is a split/join of %key% over every variable in turn, so a value containing another %key% is substituted again depending on key order, and missing variables stay as literal %key% - packages/extension/services/actService.ts:517-520 (history 1e50db6)",
+          "files": [
+            "packages/extension/services/actService.ts"
+          ]
+        },
+        {
+          "text": "Cross-origin iframe sessions wait in pendingOopifByMainFrame until the frame attaches; the map is cleared on re-init and touched in many places, so edits to attach/detach/adoption can silently drop iframe content from snapshots and act - packages/extension/understudy/context.ts:107,495,825,875,1009 (history 44d99df)",
+          "files": [
+            "packages/extension/understudy/context.ts"
+          ]
+        },
+        {
+          "text": "Stagehand init reconnects only when browserCdpUrl differs from the remembered browserSessionCdpUrl, and throws if it is missing and no session is connected; any new path that connects must set/clear browserSessionCdpUrl or a changed CDP URL is silently ignored - packages/extension/runtime.ts:378-400,449-478 (history 113ad81)",
+          "files": [
+            "packages/extension/runtime.ts"
+          ]
+        },
+        {
+          "text": "Domain policy outlives the Stagehand instance on the shared browser connection unless disposeStagehandInstance clears it; keep that reset when changing disposal or the next instance inherits the old policy - packages/extension/runtime.ts:1088-1090 (history 066e875)",
+          "files": [
+            "packages/extension/runtime.ts"
+          ]
+        },
+        {
+          "text": "Frame.evaluate injects the function source and JSON.stringify(arg) into an expression string, retries once only on 'Cannot find context with specified id', and checks progress.throwIfStopped between steps; undefined args and non-JSON values are not preserved - packages/extension/understudy/frame.ts:136-180 (history 7d8dcef, 1e3270c)",
+          "files": [
+            "packages/extension/understudy/frame.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-integrations",
+      "title": "Agent-harness integrations exposing run, snapshot and screenshot tools over MCP or in-process",
+      "files": [
+        "packages/integrations/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm test:unit",
+          "why": "vitest on rules and scripts that enforce integration parity"
+        }
+      ],
+      "risks": [
+        {
+          "text": "The tool contract (descriptions, schemas, validators, system prompt) lives once in core/ and must not be restated in a harness package - packages/integrations/README.md:3-6",
+          "files": [
+            "packages/integrations/README.md"
+          ]
+        },
+        {
+          "text": "fx-sdk sessions must set FX_SOUND=off, FX_SKIP_ONBOARDING, FX_AUTO_UPGRADE=0, FX_NO_OPEN_BROWSER and NO_COLOR or the harness blocks on prompts and plays sounds - packages/integrations/fx-sdk/src/session.ts:470-475 (history c322452)",
+          "files": [
+            "packages/integrations/fx-sdk/src/session.ts"
+          ]
+        },
+        {
+          "text": "Cursor and fx agents may only use the three tools run, snapshot and screenshot; there is no navigate or start tool, so open pages with run and `page.goto(...)`, and never invent a tool name or launch a separate browser - packages/integrations/cursor/AGENTS.md:1-8",
+          "files": [
+            "packages/integrations/cursor/AGENTS.md"
+          ]
+        },
+        {
+          "text": "fx exposes the tools as mcp_stagehand_run, mcp_stagehand_snapshot and mcp_stagehand_screenshot and must select them with mcp_select_tool, because mcp_search_tools may return nothing for this server - packages/integrations/fx/AGENTS.md:3-12",
+          "files": [
+            "packages/integrations/fx/AGENTS.md"
+          ]
+        },
+        {
+          "text": "fx screenshots should be jpeg quality 40 and not full page, because inline full-page PNGs can exceed fx's MCP response-frame limit - packages/integrations/fx/AGENTS.md:14-17",
+          "files": [
+            "packages/integrations/fx/AGENTS.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-protocol",
+      "title": "JSON-RPC protocol contract: zod schemas, generated JSON schema, protocol version",
+      "files": [
+        "packages/protocol/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-protocol test",
+          "why": "the test suite of @browserbasehq/stagehand-protocol"
+        },
+        {
+          "run": "pnpm --filter @browserbasehq/stagehand-protocol run typecheck",
+          "why": "types of @browserbasehq/stagehand-protocol"
+        }
+      ],
+      "risks": [
+        {
+          "text": "stagehand.v4.json is generated by `pnpm build`; hand edits or forgetting to rebuild after changing schemas.ts make the Python models drift - packages/protocol/package.json:11 (history bfeda48)",
+          "files": [
+            "packages/protocol/package.json"
+          ]
+        },
+        {
+          "text": "Model IDs are only checked as non-empty without whitespace so new models work without a release; do not re-add enums of model names - packages/protocol/schemas.ts:7-8 (history bfeda48)",
+          "files": [
+            "packages/protocol/schemas.ts"
+          ]
+        },
+        {
+          "text": "Telemetry export is opt-in; the traces endpoint must end in /v1/traces and the config is a strict object, so unknown keys are rejected - packages/protocol/schemas.ts:1501-1512 (history 4da1a21)",
+          "files": [
+            "packages/protocol/schemas.ts"
+          ]
+        },
+        {
+          "text": "Protocol version comes from this package's package.json and is parsed at import; bumping it needs `just generate` - packages/protocol/protocol-version.ts:2,13",
+          "files": [
+            "packages/protocol/protocol-version.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-sdk-python",
+      "title": "Python SDK: launches the browser with the extension and talks the protocol through pydantic models",
+      "files": [
+        "packages/sdk-python/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm test",
+          "why": "the test suite"
+        },
+        {
+          "run": "pnpm run typecheck",
+          "why": "types"
+        },
+        {
+          "run": "pnpm run lint",
+          "why": "lint rules"
+        },
+        {
+          "run": "pytest",
+          "why": "the Python tests"
+        }
+      ],
+      "risks": [
+        {
+          "text": "_generated/ is overwritten by generate.py and compared byte for byte by --check; never edit it by hand - packages/sdk-python/scripts/generate.py:208-221 (history bfeda48)",
+          "files": [
+            "packages/sdk-python/scripts/generate.py"
+          ]
+        },
+        {
+          "text": "generate.py reads and writes with read_text/write_text without an encoding and pops envelope defs by key, so a renamed def in the JSON raises KeyError - packages/sdk-python/scripts/generate.py:171,181-205,224",
+          "files": [
+            "packages/sdk-python/scripts/generate.py"
+          ]
+        },
+        {
+          "text": "extension_id is deprecated and ignored (extension is found automatically) but a blank string still raises ValueError; launch flags include WebMCP and --enable-unsafe-extension-debugging - packages/sdk-python/src/stagehand/browser.py:74-76,795,813 (history f2060a6, 10418f9)",
+          "files": [
+            "packages/sdk-python/src/stagehand/browser.py"
+          ]
+        },
+        {
+          "text": "Pydantic must stay v2 (pin >=2.12,<3, model_validator/field_validator); v1 methods such as .dict() would break - packages/sdk-python/pyproject.toml:7",
+          "files": [
+            "packages/sdk-python/pyproject.toml"
+          ]
+        },
+        {
+          "text": "openai is a dev dependency only; the live routing test makes real paid calls - packages/sdk-python/tests/test_browserbase_routing_live.py:118",
+          "files": [
+            "packages/sdk-python/tests/test_browserbase_routing_live.py"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "packages-sdk-ts",
+      "title": "TypeScript SDK @browserbasehq/stagehand (tsdown build, unit and browser-runtime tests)",
+      "files": [
+        "packages/sdk-ts/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter ./packages/sdk-ts test:unit",
+          "why": "SDK unit tests without a browser"
+        },
+        {
+          "run": "pnpm --filter ./packages/sdk-ts test:browser",
+          "why": "browser-runtime tests"
+        },
+        {
+          "run": "pnpm --filter ./packages/sdk-ts build",
+          "why": "tsdown build of the published package"
+        }
+      ],
+      "risks": [
+        {
+          "text": "STAGEHAND_EXTENSION_ARCHIVE_PATH and STAGEHAND_EXTENSION_DIRECTORY_PATH are read once at import time (trimmed, empty means unset), so setting them after the module loads has no effect - packages/sdk-ts/src/extensionAssets.ts:10-22",
+          "files": [
+            "packages/sdk-ts/src/extensionAssets.ts"
+          ]
+        },
+        {
+          "text": "STAGEHAND_CDP_HEARTBEAT_MS silently falls back to 20000 ms unless it is an integer from 1000 to 2147483647, so a typo in the value is ignored without a warning - packages/sdk-ts/src/cdpClient.ts:1101-1106",
+          "files": [
+            "packages/sdk-ts/src/cdpClient.ts"
+          ]
+        },
+        {
+          "text": "STAGEHAND_CDP_LOG_FILE is appended to without an encoding and errors are swallowed, so a bad path loses logs silently - packages/sdk-ts/src/cdpClient.ts:341-347",
+          "files": [
+            "packages/sdk-ts/src/cdpClient.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "root",
+      "title": "Repository root: tooling config, justfile, workspace, README, contributor notes",
+      "files": [
+        ".env.example",
+        ".gitignore",
+        ".oxfmtrc.json",
+        "AGENTS.md",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "LICENSE",
+        "README.md",
+        "SECURITY.md",
+        "cubic.yaml",
+        "justfile",
+        "oxlint.config.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
+        "pyproject.toml",
+        "tsconfig.json",
+        "tsconfig.tooling.json",
+        "turbo.json",
+        "uv.lock",
+        "vitest.config.ts",
+        "vitest.integration.config.ts"
+      ],
+      "checks": [
+        {
+          "run": "pnpm check",
+          "why": "turbo fmt:check, lint and typecheck over the workspace"
+        },
+        {
+          "run": "pnpm test:unit",
+          "why": "vitest on rules and scripts"
+        }
+      ],
+      "risks": []
+    },
+    {
+      "id": "rules",
+      "title": "Custom lint rules (ast-grep and oxlint) for the repository",
+      "files": [
+        "rules/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm test:unit",
+          "why": "vitest of the ast-grep rule tests in rules/"
+        },
+        {
+          "run": "pnpm lint",
+          "why": "oxlint with the custom stagehand plugin"
+        }
+      ],
+      "risks": []
+    },
+    {
+      "id": "scripts",
+      "title": "Integration-test runner, release tooling and Python version sync",
+      "files": [
+        "scripts/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm test:unit",
+          "why": "vitest on scripts/test-integration.test.ts and release scripts"
+        },
+        {
+          "run": "pnpm test:integration",
+          "why": "runs the grouped integration tests against a real browser"
+        }
+      ],
+      "risks": [
+        {
+          "text": "Every integration test file under packages/sdk-ts/tests/integration must be listed in exactly one group, or discovery throws; the groups name the iframe/XPath/text() regression tests (actIframeAttachment, locatorXPathTextPredicates, textSelectorInnermost), so removing or renaming one drops that regression coverage - scripts/test-integration.ts:28-52 (history 18b96f2, 70f4e91, f3543d3)",
+          "files": [
+            "scripts/test-integration.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tests",
+      "title": "Shared test fixtures",
+      "files": [
+        "tests/**"
+      ],
+      "checks": [
+        {
+          "run": "pnpm test:unit",
+          "why": "vitest suites that read these fixtures"
+        }
+      ],
+      "risks": []
+    }
+  ],
+  "rules": [
+    {
+      "id": "regenerate-python-models",
+      "rule": "Never hand-edit packages/sdk-python/src/stagehand/_generated; change schemas.ts, rebuild the protocol, then run `just generate` and commit the output.",
+      "why": "`just check` compares generated files byte for byte, so CI fails and the Python SDK drifts from the wire contract.",
+      "files": [
+        "packages/protocol/**",
+        "packages/sdk-python/src/stagehand/_generated/**"
+      ],
+      "checks": [
+        {
+          "run": "just check",
+          "why": "generated-code drift"
+        }
+      ]
+    },
+    {
+      "id": "strict-protocol",
+      "rule": "Protocol objects are z.strictObject; adding, renaming or making a field accepted on one side is a wire change that must go through the protocol package and a version bump per CONTRIBUTING.",
+      "why": "Strict objects reject unknown keys, so an older extension or SDK that receives a new field fails the whole request; the strictness test fails the build if a schema uses a loose object.",
+      "files": [
+        "packages/protocol/schemas.ts",
+        "rules/ast-grep/protocol-schema-strictness.test.ts"
+      ],
+      "checks": [
+        {
+          "run": "pnpm test:unit",
+          "why": "vitest rules incl. protocol-schema-strictness"
+        },
+        {
+          "run": "pnpm --filter ./packages/protocol test",
+          "why": "schema and type sync"
+        }
+      ]
+    },
+    {
+      "id": "devserver-token",
+      "rule": "Every functions dev runtime route must require the per-run token prefix.",
+      "why": "otherwise any local process or web page can poll invocations (session connectUrl, secrets) or forge results.",
+      "files": [
+        "packages/cli/src/lib/functions/dev.ts"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter ./packages/cli test",
+          "why": "CLI tests"
+        }
+      ]
+    },
+    {
+      "id": "verify-cdp-port",
+      "rule": "A DevToolsActivePort file must be verified against the live /json/version before use.",
+      "why": "a port collision connects the CLI to the wrong browser.",
+      "files": [
+        "packages/cli/src/lib/driver/local-cdp-discovery.ts"
+      ]
+    },
+    {
+      "id": "cli-node-gate",
+      "rule": "The Node engines range in packages/cli/package.json must match the check in bin/run.js, which must run first.",
+      "why": "users on old Node get cryptic syntax errors instead of the upgrade message.",
+      "files": [
+        "packages/cli/bin/run.js",
+        "packages/cli/package.json"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter ./packages/cli test",
+          "why": "Node gate test"
+        }
+      ]
+    },
+    {
+      "id": "extension-build-valid",
+      "rule": "The extension version must be a valid Chrome version and the build must pass validateExtension before the zip is written.",
+      "why": "SDKs embed the zip; a bad build throws or ships a broken artifact.",
+      "files": [
+        "packages/extension/vite.config.ts",
+        "packages/extension/manifest.json",
+        "packages/extension/package.json"
+      ],
+      "checks": [
+        {
+          "run": "pnpm --filter ./packages/extension test",
+          "why": "build and its validation"
+        }
+      ]
+    },
+    {
+      "id": "variables-at-act-time",
+      "rule": "Variables are substituted as %name% tokens at act/replay time, never stored raw in cached actions.",
+      "why": "cached actions would leak raw values or fail to replay.",
+      "files": [
+        "packages/extension/services/actService.ts",
+        "packages/extension/handlers/handlerUtils/variables.ts"
+      ]
+    },
+    {
+      "id": "tool-contract-in-core",
+      "rule": "Tool contract changes go in packages/integrations/core only.",
+      "why": "copies in harness packages drift from the contract.",
+      "files": [
+        "packages/integrations/**"
+      ]
+    },
+    {
+      "id": "integration-test-groups",
+      "rule": "Each integration test file belongs to exactly one group in integrationTestGroups.",
+      "why": "the runner throws on discovery.",
+      "files": [
+        "scripts/test-integration.ts",
+        "packages/sdk-ts/tests/integration/**"
+      ]
+    },
+    {
+      "id": "stacked-prs",
+      "rule": "Target each stacked PR at its immediate predecessor; after a squash merge of the parent, verify identical trees and merge S^ then S with -s ours.",
+      "why": "otherwise the child PR diff shows already-merged changes or loses changes.",
+      "files": [
+        "AGENTS.md",
+        "CONTRIBUTING.md"
+      ]
+    }
+  ],
+  "ignore": [],
+  "hotspots": [
+    {
+      "file": "packages/cli/src/lib/functions/dev.ts",
+      "symbol": "start",
+      "line": 248,
+      "labels": [
+        "secrets"
+      ],
+      "rules": [
+        "devserver-token"
+      ],
+      "note": "Reads secrets or the environment"
+    },
+    {
+      "file": "packages/cli/src/lib/functions/dev.ts",
+      "symbol": "getRuntimeStartupTimeoutMs",
+      "line": 456,
+      "labels": [
+        "secrets"
+      ],
+      "rules": [
+        "devserver-token"
+      ],
+      "note": "Reads secrets or the environment"
+    }
+  ]
+}
